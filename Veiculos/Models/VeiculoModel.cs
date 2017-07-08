@@ -26,7 +26,7 @@ namespace Veiculos.Models
 
         public virtual PessoaModel Proprietario { get; set; }
 
-        public virtual ICollection<MultasModel> Multas { get; set; }
+        public IEnumerable<MultasModel> Multas { get; set; }
     }
 
 }

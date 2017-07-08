@@ -21,7 +21,7 @@ namespace Veiculos.Models
         [Required]
         public String documento { get; set; }
 
-        public virtual VeiculoModel Veiculo { get; set; }
+        public IEnumerable<VeiculoModel> Veiculos { get; set; }
     }
 
 }
