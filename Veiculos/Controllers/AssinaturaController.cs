@@ -17,9 +17,9 @@ namespace Veiculos.Controllers
         private ContextoDb db = new ContextoDb();
 
         // GET: api/Assinatura
-        public IQueryable<AssinaturaModel> GetAssinatura()
+        public IEnumerable<AssinaturaModel> GetAssinatura()
         {
-            return db.Assinatura;
+            return db.Assinatura.ToList();
         }
 
         // GET: api/Assinatura/5

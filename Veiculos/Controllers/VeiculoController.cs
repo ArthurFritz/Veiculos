@@ -17,9 +17,9 @@ namespace Veiculos.Controllers
         private ContextoDb db = new ContextoDb();
 
         // GET: api/Veiculo
-        public IQueryable<VeiculoModel> GetVeiculo()
+        public IEnumerable<VeiculoModel> GetVeiculo()
         {
-            return db.Veiculo;
+            return db.Veiculo.ToList();
         }
 
         // GET: api/Veiculo/5

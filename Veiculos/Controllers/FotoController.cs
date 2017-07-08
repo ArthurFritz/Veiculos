@@ -17,9 +17,9 @@ namespace Veiculos.Controllers
         private ContextoDb db = new ContextoDb();
 
         // GET: api/Foto
-        public IQueryable<FotoModel> GetFoto()
+        public IEnumerable<FotoModel> GetFoto()
         {
-            return db.Foto;
+            return db.Foto.ToList();
         }
 
         // GET: api/Foto/5

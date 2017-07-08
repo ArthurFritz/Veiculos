@@ -17,9 +17,9 @@ namespace Veiculos.Controllers
         private ContextoDb db = new ContextoDb();
 
         // GET: api/Multas
-        public IQueryable<MultasModel> GetMulta()
+        public IEnumerable<MultasModel> GetMulta()
         {
-            return db.Multa;
+            return db.Multa.ToList();
         }
 
         // GET: api/Multas/5
