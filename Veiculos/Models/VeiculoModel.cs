@@ -9,7 +9,7 @@ namespace Veiculos.Models
 {
     public class VeiculoModel
     {
-        [Key, ForeignKey("Proprietario")]
+        [Key]
         public int id { get; set; }
 
         [Required]
