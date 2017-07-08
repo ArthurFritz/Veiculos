@@ -10,7 +10,9 @@ namespace Veiculos.Models
 {
     class ContextoDb : DbContext
     {
-        public ContextoDb() : base("DefaultConnection"){}
+        public ContextoDb() : base("DefaultConnection"){
+            //Database.SetInitializer(new DropCreateDatabaseIfModelChanges<ContextoDb>());
+        }
 
         public DbSet<PessoaModel> Pessoa { get; set; }
         public DbSet<FotoModel> Foto { get; set; }

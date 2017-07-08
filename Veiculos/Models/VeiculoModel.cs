@@ -24,6 +24,9 @@ namespace Veiculos.Models
         [Required]
         public String placa { get; set; }
 
+        [ForeignKey("Proprietario")]
+        public int PessoaID { get; set; }
+
         public virtual PessoaModel Proprietario { get; set; }
 
         public IEnumerable<MultasModel> Multas { get; set; }
