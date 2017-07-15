@@ -19,6 +19,7 @@ namespace Veiculos
             // Configure a API Web para usar somente a autenticação de token de portador.
             config.SuppressDefaultHostAuthentication();
             config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
+            config.EnableCors();
 
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.EntitySet<AssinaturaModel>("Assinatura");
