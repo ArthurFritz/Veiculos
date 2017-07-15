@@ -14,17 +14,8 @@ using Veiculos.Models;
 
 namespace Veiculos.Controllers
 {
-    /*
-    A classe WebApiConfig pode requerer alterações adicionais para adicionar uma rota para esse controlador. Misture essas declarações no método Register da classe WebApiConfig conforme aplicável. Note que URLs OData diferenciam maiúsculas e minúsculas.
-
-    using System.Web.Http.OData.Builder;
-    using System.Web.Http.OData.Extensions;
-    using Veiculos.Models;
-    ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-    builder.EntitySet<AssinaturaModel>("Assinatura");
-    builder.EntitySet<PessoaModel>("Pessoa"); 
-    config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
-    */
+    
+    [Authorize]
     public class AssinaturaController : ODataController
     {
         private ContextoDb db = new ContextoDb();
