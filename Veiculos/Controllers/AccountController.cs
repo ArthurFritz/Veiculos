@@ -16,10 +16,12 @@ using Microsoft.Owin.Security.OAuth;
 using Veiculos.Models;
 using Veiculos.Providers;
 using Veiculos.Results;
+using System.Web.Http.Cors;
 
 namespace Veiculos.Controllers
 {
     [Authorize]
+    [EnableCors(origins: "*", headers: "*", methods: "*")]
     [RoutePrefix("api/Account")]
     public class AccountController : ApiController
     {
