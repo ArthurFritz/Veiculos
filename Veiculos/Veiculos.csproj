@@ -241,7 +241,6 @@
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\AssinaturaController.cs" />
     <Compile Include="Controllers\FotoController.cs" />
-    <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\MultasController.cs" />
     <Compile Include="Controllers\PessoaController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />

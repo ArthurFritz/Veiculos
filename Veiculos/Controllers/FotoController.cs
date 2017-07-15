@@ -7,49 +7,59 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Description;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using Veiculos.Models;
 
 namespace Veiculos.Controllers
 {
-    public class FotoController : ApiController
+    /*
+    A classe WebApiConfig pode requerer alterações adicionais para adicionar uma rota para esse controlador. Misture essas declarações no método Register da classe WebApiConfig conforme aplicável. Note que URLs OData diferenciam maiúsculas e minúsculas.
+
+    using System.Web.Http.OData.Builder;
+    using System.Web.Http.OData.Extensions;
+    using Veiculos.Models;
+    ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+    builder.EntitySet<FotoModel>("Foto");
+    builder.EntitySet<PessoaModel>("Pessoa"); 
+    config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
+    */
+    public class FotoController : ODataController
     {
         private ContextoDb db = new ContextoDb();
 
-        // GET: api/Foto
-        public IEnumerable<FotoModel> GetFoto()
+        // GET: odata/Foto
+        [EnableQuery]
+        public IQueryable<FotoModel> GetFoto()
         {
-            return db.Foto.ToList();
+            return db.Foto;
         }
 
-        // GET: api/Foto/5
-        [ResponseType(typeof(FotoModel))]
-        public IHttpActionResult GetFotoModel(int id)
+        // GET: odata/Foto(5)
+        [EnableQuery]
+        public SingleResult<FotoModel> GetFotoModel([FromODataUri] int key)
         {
-            FotoModel fotoModel = db.Foto.Find(id);
-            if (fotoModel == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(fotoModel);
+            return SingleResult.Create(db.Foto.Where(fotoModel => fotoModel.id == key));
         }
 
-        // PUT: api/Foto/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutFotoModel(int id, FotoModel fotoModel)
+        // PUT: odata/Foto(5)
+        public IHttpActionResult Put([FromODataUri] int key, Delta<FotoModel> patch)
         {
+            Validate(patch.GetEntity());
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != fotoModel.id)
+            FotoModel fotoModel = db.Foto.Find(key);
+            if (fotoModel == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            db.Entry(fotoModel).State = EntityState.Modified;
+            patch.Put(fotoModel);
 
             try
             {
@@ -57,7 +67,7 @@ namespace Veiculos.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!FotoModelExists(id))
+                if (!FotoModelExists(key))
                 {
                     return NotFound();
                 }
@@ -67,12 +77,11 @@ namespace Veiculos.Controllers
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            return Updated(fotoModel);
         }
 
-        // POST: api/Foto
-        [ResponseType(typeof(FotoModel))]
-        public IHttpActionResult PostFotoModel(FotoModel fotoModel)
+        // POST: odata/Foto
+        public IHttpActionResult Post(FotoModel fotoModel)
         {
             if (!ModelState.IsValid)
             {
@@ -82,14 +91,51 @@ namespace Veiculos.Controllers
             db.Foto.Add(fotoModel);
             db.SaveChanges();
 
-            return CreatedAtRoute("DefaultApi", new { id = fotoModel.id }, fotoModel);
+            return Created(fotoModel);
         }
 
-        // DELETE: api/Foto/5
-        [ResponseType(typeof(FotoModel))]
-        public IHttpActionResult DeleteFotoModel(int id)
+        // PATCH: odata/Foto(5)
+        [AcceptVerbs("PATCH", "MERGE")]
+        public IHttpActionResult Patch([FromODataUri] int key, Delta<FotoModel> patch)
         {
-            FotoModel fotoModel = db.Foto.Find(id);
+            Validate(patch.GetEntity());
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            FotoModel fotoModel = db.Foto.Find(key);
+            if (fotoModel == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(fotoModel);
+
+            try
+            {
+                db.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!FotoModelExists(key))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Updated(fotoModel);
+        }
+
+        // DELETE: odata/Foto(5)
+        public IHttpActionResult Delete([FromODataUri] int key)
+        {
+            FotoModel fotoModel = db.Foto.Find(key);
             if (fotoModel == null)
             {
                 return NotFound();
@@ -98,7 +144,14 @@ namespace Veiculos.Controllers
             db.Foto.Remove(fotoModel);
             db.SaveChanges();
 
-            return Ok(fotoModel);
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        // GET: odata/Foto(5)/Pessoa
+        [EnableQuery]
+        public SingleResult<PessoaModel> GetPessoa([FromODataUri] int key)
+        {
+            return SingleResult.Create(db.Foto.Where(m => m.id == key).Select(m => m.Pessoa));
         }
 
         protected override void Dispose(bool disposing)
@@ -110,9 +163,9 @@ namespace Veiculos.Controllers
             base.Dispose(disposing);
         }
 
-        private bool FotoModelExists(int id)
+        private bool FotoModelExists(int key)
         {
-            return db.Foto.Count(e => e.id == id) > 0;
+            return db.Foto.Count(e => e.id == key) > 0;
         }
     }
 }

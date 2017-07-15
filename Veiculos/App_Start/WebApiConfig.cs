@@ -5,6 +5,9 @@ using System.Net.Http;
 using System.Web.Http;
 using Microsoft.Owin.Security.OAuth;
 using Newtonsoft.Json.Serialization;
+using System.Web.Http.OData.Builder;
+using System.Web.Http.OData.Extensions;
+using Veiculos.Models;
 
 namespace Veiculos
 {
@@ -17,6 +20,15 @@ namespace Veiculos
             config.SuppressDefaultHostAuthentication();
             config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
 
+            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.EntitySet<AssinaturaModel>("Assinatura");
+            builder.EntitySet<PessoaModel>("Pessoa");
+            builder.EntitySet<FotoModel>("Foto");
+            builder.EntitySet<MultasModel>("Multas");
+            builder.EntitySet<VeiculoModel>("Veiculo");
+            builder.EntitySet<PessoaModel>("Pessoa");
+            config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
+
             // Rotas de API Web
             config.MapHttpAttributeRoutes();
 
@@ -25,6 +37,8 @@ namespace Veiculos
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+
         }
     }
 }

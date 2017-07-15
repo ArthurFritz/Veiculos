@@ -7,49 +7,59 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Description;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using Veiculos.Models;
 
 namespace Veiculos.Controllers
 {
-    public class MultasController : ApiController
+    /*
+    A classe WebApiConfig pode requerer alterações adicionais para adicionar uma rota para esse controlador. Misture essas declarações no método Register da classe WebApiConfig conforme aplicável. Note que URLs OData diferenciam maiúsculas e minúsculas.
+
+    using System.Web.Http.OData.Builder;
+    using System.Web.Http.OData.Extensions;
+    using Veiculos.Models;
+    ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+    builder.EntitySet<MultasModel>("Multas");
+    builder.EntitySet<VeiculoModel>("Veiculo"); 
+    config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
+    */
+    public class MultasController : ODataController
     {
         private ContextoDb db = new ContextoDb();
 
-        // GET: api/Multas
-        public IEnumerable<MultasModel> GetMulta()
+        // GET: odata/Multas
+        [EnableQuery]
+        public IQueryable<MultasModel> GetMultas()
         {
-            return db.Multa.ToList();
+            return db.Multa;
         }
 
-        // GET: api/Multas/5
-        [ResponseType(typeof(MultasModel))]
-        public IHttpActionResult GetMultasModel(int id)
+        // GET: odata/Multas(5)
+        [EnableQuery]
+        public SingleResult<MultasModel> GetMultasModel([FromODataUri] int key)
         {
-            MultasModel multasModel = db.Multa.Find(id);
-            if (multasModel == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(multasModel);
+            return SingleResult.Create(db.Multa.Where(multasModel => multasModel.id == key));
         }
 
-        // PUT: api/Multas/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutMultasModel(int id, MultasModel multasModel)
+        // PUT: odata/Multas(5)
+        public IHttpActionResult Put([FromODataUri] int key, Delta<MultasModel> patch)
         {
+            Validate(patch.GetEntity());
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != multasModel.id)
+            MultasModel multasModel = db.Multa.Find(key);
+            if (multasModel == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            db.Entry(multasModel).State = EntityState.Modified;
+            patch.Put(multasModel);
 
             try
             {
@@ -57,7 +67,7 @@ namespace Veiculos.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!MultasModelExists(id))
+                if (!MultasModelExists(key))
                 {
                     return NotFound();
                 }
@@ -67,12 +77,11 @@ namespace Veiculos.Controllers
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            return Updated(multasModel);
         }
 
-        // POST: api/Multas
-        [ResponseType(typeof(MultasModel))]
-        public IHttpActionResult PostMultasModel(MultasModel multasModel)
+        // POST: odata/Multas
+        public IHttpActionResult Post(MultasModel multasModel)
         {
             if (!ModelState.IsValid)
             {
@@ -82,14 +91,51 @@ namespace Veiculos.Controllers
             db.Multa.Add(multasModel);
             db.SaveChanges();
 
-            return CreatedAtRoute("DefaultApi", new { id = multasModel.id }, multasModel);
+            return Created(multasModel);
         }
 
-        // DELETE: api/Multas/5
-        [ResponseType(typeof(MultasModel))]
-        public IHttpActionResult DeleteMultasModel(int id)
+        // PATCH: odata/Multas(5)
+        [AcceptVerbs("PATCH", "MERGE")]
+        public IHttpActionResult Patch([FromODataUri] int key, Delta<MultasModel> patch)
         {
-            MultasModel multasModel = db.Multa.Find(id);
+            Validate(patch.GetEntity());
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            MultasModel multasModel = db.Multa.Find(key);
+            if (multasModel == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(multasModel);
+
+            try
+            {
+                db.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!MultasModelExists(key))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Updated(multasModel);
+        }
+
+        // DELETE: odata/Multas(5)
+        public IHttpActionResult Delete([FromODataUri] int key)
+        {
+            MultasModel multasModel = db.Multa.Find(key);
             if (multasModel == null)
             {
                 return NotFound();
@@ -98,7 +144,14 @@ namespace Veiculos.Controllers
             db.Multa.Remove(multasModel);
             db.SaveChanges();
 
-            return Ok(multasModel);
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        // GET: odata/Multas(5)/Veiculo
+        [EnableQuery]
+        public SingleResult<VeiculoModel> GetVeiculo([FromODataUri] int key)
+        {
+            return SingleResult.Create(db.Multa.Where(m => m.id == key).Select(m => m.Veiculo));
         }
 
         protected override void Dispose(bool disposing)
@@ -110,9 +163,9 @@ namespace Veiculos.Controllers
             base.Dispose(disposing);
         }
 
-        private bool MultasModelExists(int id)
+        private bool MultasModelExists(int key)
         {
-            return db.Multa.Count(e => e.id == id) > 0;
+            return db.Multa.Count(e => e.id == key) > 0;
         }
     }
 }

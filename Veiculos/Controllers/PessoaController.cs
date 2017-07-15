@@ -7,49 +7,58 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Description;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using Veiculos.Models;
 
 namespace Veiculos.Controllers
 {
-    public class PessoaController : ApiController
+    /*
+    A classe WebApiConfig pode requerer alterações adicionais para adicionar uma rota para esse controlador. Misture essas declarações no método Register da classe WebApiConfig conforme aplicável. Note que URLs OData diferenciam maiúsculas e minúsculas.
+
+    using System.Web.Http.OData.Builder;
+    using System.Web.Http.OData.Extensions;
+    using Veiculos.Models;
+    ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+    builder.EntitySet<PessoaModel>("Pessoa");
+    config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
+    */
+    public class PessoaController : ODataController
     {
         private ContextoDb db = new ContextoDb();
 
-        // GET: api/Pessoa
-        public IEnumerable<PessoaModel> GetPessoa()
+        // GET: odata/Pessoa
+        [EnableQuery]
+        public IQueryable<PessoaModel> GetPessoa()
         {
-            return db.Pessoa.ToList();
+            return db.Pessoa;
         }
 
-        // GET: api/Pessoa/5
-        [ResponseType(typeof(PessoaModel))]
-        public IHttpActionResult GetPessoaModel(int id)
+        // GET: odata/Pessoa(5)
+        [EnableQuery]
+        public SingleResult<PessoaModel> GetPessoaModel([FromODataUri] int key)
         {
-            PessoaModel pessoaModel = db.Pessoa.Find(id);
-            if (pessoaModel == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(pessoaModel);
+            return SingleResult.Create(db.Pessoa.Where(pessoaModel => pessoaModel.id == key));
         }
 
-        // PUT: api/Pessoa/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutPessoaModel(int id, PessoaModel pessoaModel)
+        // PUT: odata/Pessoa(5)
+        public IHttpActionResult Put([FromODataUri] int key, Delta<PessoaModel> patch)
         {
+            Validate(patch.GetEntity());
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != pessoaModel.id)
+            PessoaModel pessoaModel = db.Pessoa.Find(key);
+            if (pessoaModel == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            db.Entry(pessoaModel).State = EntityState.Modified;
+            patch.Put(pessoaModel);
 
             try
             {
@@ -57,7 +66,7 @@ namespace Veiculos.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!PessoaModelExists(id))
+                if (!PessoaModelExists(key))
                 {
                     return NotFound();
                 }
@@ -67,12 +76,11 @@ namespace Veiculos.Controllers
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            return Updated(pessoaModel);
         }
 
-        // POST: api/Pessoa
-        [ResponseType(typeof(PessoaModel))]
-        public IHttpActionResult PostPessoaModel(PessoaModel pessoaModel)
+        // POST: odata/Pessoa
+        public IHttpActionResult Post(PessoaModel pessoaModel)
         {
             if (!ModelState.IsValid)
             {
@@ -82,14 +90,51 @@ namespace Veiculos.Controllers
             db.Pessoa.Add(pessoaModel);
             db.SaveChanges();
 
-            return CreatedAtRoute("DefaultApi", new { id = pessoaModel.id }, pessoaModel);
+            return Created(pessoaModel);
         }
 
-        // DELETE: api/Pessoa/5
-        [ResponseType(typeof(PessoaModel))]
-        public IHttpActionResult DeletePessoaModel(int id)
+        // PATCH: odata/Pessoa(5)
+        [AcceptVerbs("PATCH", "MERGE")]
+        public IHttpActionResult Patch([FromODataUri] int key, Delta<PessoaModel> patch)
         {
-            PessoaModel pessoaModel = db.Pessoa.Find(id);
+            Validate(patch.GetEntity());
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            PessoaModel pessoaModel = db.Pessoa.Find(key);
+            if (pessoaModel == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(pessoaModel);
+
+            try
+            {
+                db.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!PessoaModelExists(key))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Updated(pessoaModel);
+        }
+
+        // DELETE: odata/Pessoa(5)
+        public IHttpActionResult Delete([FromODataUri] int key)
+        {
+            PessoaModel pessoaModel = db.Pessoa.Find(key);
             if (pessoaModel == null)
             {
                 return NotFound();
@@ -98,7 +143,7 @@ namespace Veiculos.Controllers
             db.Pessoa.Remove(pessoaModel);
             db.SaveChanges();
 
-            return Ok(pessoaModel);
+            return StatusCode(HttpStatusCode.NoContent);
         }
 
         protected override void Dispose(bool disposing)
@@ -110,9 +155,9 @@ namespace Veiculos.Controllers
             base.Dispose(disposing);
         }
 
-        private bool PessoaModelExists(int id)
+        private bool PessoaModelExists(int key)
         {
-            return db.Pessoa.Count(e => e.id == id) > 0;
+            return db.Pessoa.Count(e => e.id == key) > 0;
         }
     }
 }

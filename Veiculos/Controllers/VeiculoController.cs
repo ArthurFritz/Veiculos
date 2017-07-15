@@ -7,49 +7,59 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Description;
+using System.Web.Http.ModelBinding;
+using System.Web.Http.OData;
+using System.Web.Http.OData.Routing;
 using Veiculos.Models;
 
 namespace Veiculos.Controllers
 {
-    public class VeiculoController : ApiController
+    /*
+    A classe WebApiConfig pode requerer alterações adicionais para adicionar uma rota para esse controlador. Misture essas declarações no método Register da classe WebApiConfig conforme aplicável. Note que URLs OData diferenciam maiúsculas e minúsculas.
+
+    using System.Web.Http.OData.Builder;
+    using System.Web.Http.OData.Extensions;
+    using Veiculos.Models;
+    ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+    builder.EntitySet<VeiculoModel>("Veiculo");
+    builder.EntitySet<PessoaModel>("Pessoa"); 
+    config.Routes.MapODataServiceRoute("odata", "odata", builder.GetEdmModel());
+    */
+    public class VeiculoController : ODataController
     {
         private ContextoDb db = new ContextoDb();
 
-        // GET: api/Veiculo
-        public IEnumerable<VeiculoModel> GetVeiculo()
+        // GET: odata/Veiculo
+        [EnableQuery]
+        public IQueryable<VeiculoModel> GetVeiculo()
         {
-            return db.Veiculo.ToList();
+            return db.Veiculo;
         }
 
-        // GET: api/Veiculo/5
-        [ResponseType(typeof(VeiculoModel))]
-        public IHttpActionResult GetVeiculoModel(int id)
+        // GET: odata/Veiculo(5)
+        [EnableQuery]
+        public SingleResult<VeiculoModel> GetVeiculoModel([FromODataUri] int key)
         {
-            VeiculoModel veiculoModel = db.Veiculo.Find(id);
-            if (veiculoModel == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(veiculoModel);
+            return SingleResult.Create(db.Veiculo.Where(veiculoModel => veiculoModel.id == key));
         }
 
-        // PUT: api/Veiculo/5
-        [ResponseType(typeof(void))]
-        public IHttpActionResult PutVeiculoModel(int id, VeiculoModel veiculoModel)
+        // PUT: odata/Veiculo(5)
+        public IHttpActionResult Put([FromODataUri] int key, Delta<VeiculoModel> patch)
         {
+            Validate(patch.GetEntity());
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != veiculoModel.id)
+            VeiculoModel veiculoModel = db.Veiculo.Find(key);
+            if (veiculoModel == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            db.Entry(veiculoModel).State = EntityState.Modified;
+            patch.Put(veiculoModel);
 
             try
             {
@@ -57,7 +67,7 @@ namespace Veiculos.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!VeiculoModelExists(id))
+                if (!VeiculoModelExists(key))
                 {
                     return NotFound();
                 }
@@ -67,12 +77,11 @@ namespace Veiculos.Controllers
                 }
             }
 
-            return StatusCode(HttpStatusCode.NoContent);
+            return Updated(veiculoModel);
         }
 
-        // POST: api/Veiculo
-        [ResponseType(typeof(VeiculoModel))]
-        public IHttpActionResult PostVeiculoModel(VeiculoModel veiculoModel)
+        // POST: odata/Veiculo
+        public IHttpActionResult Post(VeiculoModel veiculoModel)
         {
             if (!ModelState.IsValid)
             {
@@ -80,16 +89,39 @@ namespace Veiculos.Controllers
             }
 
             db.Veiculo.Add(veiculoModel);
+            db.SaveChanges();
+
+            return Created(veiculoModel);
+        }
+
+        // PATCH: odata/Veiculo(5)
+        [AcceptVerbs("PATCH", "MERGE")]
+        public IHttpActionResult Patch([FromODataUri] int key, Delta<VeiculoModel> patch)
+        {
+            Validate(patch.GetEntity());
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            VeiculoModel veiculoModel = db.Veiculo.Find(key);
+            if (veiculoModel == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(veiculoModel);
 
             try
             {
                 db.SaveChanges();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateConcurrencyException)
             {
-                if (VeiculoModelExists(veiculoModel.id))
+                if (!VeiculoModelExists(key))
                 {
-                    return Conflict();
+                    return NotFound();
                 }
                 else
                 {
@@ -97,14 +129,13 @@ namespace Veiculos.Controllers
                 }
             }
 
-            return CreatedAtRoute("DefaultApi", new { id = veiculoModel.id }, veiculoModel);
+            return Updated(veiculoModel);
         }
 
-        // DELETE: api/Veiculo/5
-        [ResponseType(typeof(VeiculoModel))]
-        public IHttpActionResult DeleteVeiculoModel(int id)
+        // DELETE: odata/Veiculo(5)
+        public IHttpActionResult Delete([FromODataUri] int key)
         {
-            VeiculoModel veiculoModel = db.Veiculo.Find(id);
+            VeiculoModel veiculoModel = db.Veiculo.Find(key);
             if (veiculoModel == null)
             {
                 return NotFound();
@@ -113,7 +144,14 @@ namespace Veiculos.Controllers
             db.Veiculo.Remove(veiculoModel);
             db.SaveChanges();
 
-            return Ok(veiculoModel);
+            return StatusCode(HttpStatusCode.NoContent);
+        }
+
+        // GET: odata/Veiculo(5)/Proprietario
+        [EnableQuery]
+        public SingleResult<PessoaModel> GetProprietario([FromODataUri] int key)
+        {
+            return SingleResult.Create(db.Veiculo.Where(m => m.id == key).Select(m => m.Proprietario));
         }
 
         protected override void Dispose(bool disposing)
@@ -125,9 +163,9 @@ namespace Veiculos.Controllers
             base.Dispose(disposing);
         }
 
-        private bool VeiculoModelExists(int id)
+        private bool VeiculoModelExists(int key)
         {
-            return db.Veiculo.Count(e => e.id == id) > 0;
+            return db.Veiculo.Count(e => e.id == key) > 0;
         }
     }
 }
